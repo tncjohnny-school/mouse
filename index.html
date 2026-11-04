@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>滑鼠測試工具</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3450;
+      --accent: #6c63ff;
+      --accent2: #ff6b6b;
+      --accent3: #43e97b;
+      --accent4: #f7971e;
+      --text: #e8eaf6;
+      --text-muted: #7b82b4;
+      --success: #43e97b;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 60px;
+      gap: 32px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h1 .icon { font-size: 2.2rem; }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      text-align: center;
+      margin-top: -20px;
+    }
+
+    /* ── Grid layout ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      transition: border-color .25s, transform .15s;
+    }
+    .card:hover { transform: translateY(-2px); }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Hit zones ── */
+    .hit-zone {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: border-color .15s, background .15s, box-shadow .15s;
+      font-size: 3rem;
+      background: var(--surface);
+    }
+    .hit-zone.active {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.12);
+      box-shadow: 0 0 32px rgba(108, 99, 255, 0.4);
+    }
+
+    /* Colour overrides per card */
+    #zone-left.active  { border-color: #6c63ff; background: rgba(108,99,255,.12); box-shadow: 0 0 32px rgba(108,99,255,.4); }
+    #zone-right.active { border-color: #ff6b6b; background: rgba(255,107,107,.12); box-shadow: 0 0 32px rgba(255,107,107,.4); }
+    #zone-scroll.active{ border-color: #f7971e; background: rgba(247,151,30,.12); box-shadow: 0 0 32px rgba(247,151,30,.4); }
+    #zone-middle.active{ border-color: #43e97b; background: rgba(67,233,123,.12); box-shadow: 0 0 32px rgba(67,233,123,.4); }
+
+    .hit-zone .label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Counter & badge ── */
+    .counter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .counter {
+      font-size: 2.4rem;
+      font-weight: 700;
+      min-width: 48px;
+      text-align: center;
+    }
+    .reset-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: border-color .15s, color .15s;
+    }
+    .reset-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+    /* ── Scroll card special ── */
+    .scroll-track {
+      width: 160px;
+      height: 160px;
+      border-radius: var(--radius);
+      border: 3px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+
+    .scroll-direction {
+      font-size: 3rem;
+      transition: transform .15s;
+    }
+    .scroll-direction.up   { transform: translateY(-6px); }
+    .scroll-direction.down { transform: translateY( 6px); }
+
+    .scroll-delta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .scroll-track.active {
+      border-color: #f7971e;
+      box-shadow: 0 0 32px rgba(247,151,30,.4);
+    }
+
+    /* ── Event log ── */
+    .log-section {
+      width: 100%;
+      max-width: 1100px;
+    }
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .log-header h2 { font-size: 1rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .clear-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 4px 14px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: border-color .15s, color .15s;
+    }
+    .clear-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+    .log-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      height: 200px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-box::-webkit-scrollbar { width: 6px; }
+    .log-box::-webkit-scrollbar-track { background: transparent; }
+    .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      animation: fadeSlide .2s ease;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-time { color: var(--text-muted); min-width: 80px; }
+    .log-event { flex: 1; }
+    .tag {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-right: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .tag-left   { background: rgba(108,99,255,.25); color: #9d96ff; }
+    .tag-right  { background: rgba(255,107,107,.25); color: #ff9f9f; }
+    .tag-scroll { background: rgba(247,151,30,.25);  color: #ffc06b; }
+    .tag-middle { background: rgba(67,233,123,.25);  color: #7bf5a4; }
+
+    /* ── Mouse diagram (bottom) ── */
+    .mouse-visual {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: center;
+    }
+    .mouse-svg-wrap {
+      position: relative;
+      width: 220px;
+    }
+    .mouse-svg-wrap svg { width: 100%; height: auto; }
+
+    /* Button highlight overlays */
+    .m-left, .m-right, .m-wheel, .m-middle {
+      position: absolute;
+      border-radius: 999px;
+      transition: background .15s, box-shadow .15s;
+    }
+    .m-left   { top: 14%; left: 7%;  width: 42%; height: 42%; border-radius: 40% 10% 20% 10%; }
+    .m-right  { top: 14%; right: 7%; width: 42%; height: 42%; border-radius: 10% 40% 10% 20%; }
+    .m-wheel  { top: 15%; left: 50%; transform: translateX(-50%); width: 14%; height: 36%; border-radius: 6px; }
+
+    .m-left.on   { background: rgba(108,99,255,.5);  box-shadow: 0 0 20px rgba(108,99,255,.7); }
+    .m-right.on  { background: rgba(255,107,107,.5); box-shadow: 0 0 20px rgba(255,107,107,.7); }
+    .m-wheel.on  { background: rgba(247,151,30,.5);  box-shadow: 0 0 16px rgba(247,151,30,.7); }
+
+    /* ── Status pill ── */
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pill {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background .15s, box-shadow .15s;
+    }
+    .dot.on { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+    /* Scroll colour: amber */
+    .dot.scroll-on { background: #f7971e; box-shadow: 0 0 8px #f7971e; }
+  </style>
+</head>
+<body>
+
+  <h1><span class="icon">🖱️</span> 滑鼠測試工具</h1>
+  <p class="subtitle">在下方測試區點擊或滾動，即時顯示偵測結果</p>
+
+  <!-- Status pills -->
+  <div class="status-bar">
+    <div class="pill"><div class="dot" id="dot-left"></div>左鍵</div>
+    <div class="pill"><div class="dot" id="dot-right"></div>右鍵</div>
+    <div class="pill"><div class="dot" id="dot-scroll"></div>滾輪滾動</div>
+    <div class="pill"><div class="dot" id="dot-middle"></div>滾輪按下</div>
+  </div>
+
+  <!-- 4-card grid -->
+  <div class="grid">
+
+    <!-- Left Click -->
+    <div class="card">
+      <div class="card-title">左鍵點擊</div>
+      <div class="hit-zone" id="zone-left">
+        🖱️<span class="label">LEFT CLICK</span>
+      </div>
+      <div class="counter-row">
+        <div class="counter" id="cnt-left">0</div>
+        <button class="reset-btn" onclick="reset('left')">重置</button>
+      </div>
+    </div>
+
+    <!-- Right Click -->
+    <div class="card">
+      <div class="card-title">右鍵點擊</div>
+      <div class="hit-zone" id="zone-right">
+        🖱️<span class="label">RIGHT CLICK</span>
+      </div>
+      <div class="counter-row">
+        <div class="counter" id="cnt-right">0</div>
+        <button class="reset-btn" onclick="reset('right')">重置</button>
+      </div>
+    </div>
+
+    <!-- Scroll Wheel -->
+    <div class="card">
+      <div class="card-title">滾輪滾動</div>
+      <div class="scroll-track" id="zone-scroll">
+        <div class="scroll-direction" id="scroll-arrow">⬆️</div>
+        <div class="scroll-delta" id="scroll-delta">在此滾動</div>
+      </div>
+      <div class="counter-row">
+        <div class="counter" id="cnt-scroll">0</div>
+        <button class="reset-btn" onclick="reset('scroll')">重置</button>
+      </div>
+    </div>
+
+    <!-- Middle Click -->
+    <div class="card">
+      <div class="card-title">滾輪按下（中鍵）</div>
+      <div class="hit-zone" id="zone-middle">
+        🖱️<span class="label">MIDDLE CLICK</span>
+      </div>
+      <div class="counter-row">
+        <div class="counter" id="cnt-middle">0</div>
+        <button class="reset-btn" onclick="reset('middle')">重置</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Mouse diagram -->
+  <div class="mouse-visual">
+    <div class="mouse-svg-wrap">
+      <svg viewBox="0 0 200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- body -->
+        <rect x="30" y="80" width="140" height="210" rx="70" fill="#22263a" stroke="#2e3450" stroke-width="3"/>
+        <!-- top split line -->
+        <line x1="100" y1="80" x2="100" y2="155" stroke="#2e3450" stroke-width="2.5"/>
+        <!-- wheel slot -->
+        <rect x="88" y="90" width="24" height="58" rx="10" fill="#161925" stroke="#2e3450" stroke-width="2"/>
+        <!-- wheel -->
+        <rect x="91" y="95" width="18" height="48" rx="8" fill="#2e3450"/>
+      </svg>
+      <div class="m-left"  id="ml"></div>
+      <div class="m-right" id="mr"></div>
+      <div class="m-wheel" id="mw"></div>
+    </div>
+  </div>
+
+  <!-- Event log -->
+  <div class="log-section">
+    <div class="log-header">
+      <h2>📋 事件記錄</h2>
+      <button class="clear-btn" onclick="clearLog()">清除</button>
+    </div>
+    <div class="log-box" id="log-box">
+      <div class="log-entry">
+        <span class="log-time" style="color:#7b82b4">--:--:--</span>
+        <span class="log-event" style="color:#7b82b4">等待滑鼠操作…</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ── State ── */
+  const counts = { left: 0, right: 0, scroll: 0, middle: 0 };
+  let scrollTimer = null;
+  let leftTimer = null, rightTimer = null, middleTimer = null;
+
+  /* ── Helpers ── */
+  function $(id) { return document.getElementById(id); }
+
+  function now() {
+    return new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function flash(zoneId, dotId, extraClass) {
+    const z = $(zoneId), d = $(dotId);
+    z.classList.add('active');
+    d.classList.add('on', extraClass || 'on');
+  }
+
+  function unflash(zoneId, dotId, extraClass, timer, setTimer) {
+    clearTimeout(timer);
+    const t = setTimeout(() => {
+      $(zoneId).classList.remove('active');
+      $(dotId).classList.remove('on', extraClass || 'on');
+    }, 300);
+    setTimer(t);
+  }
+
+  function addLog(tag, tagClass, msg) {
+    const box = $('log-box');
+    // Remove placeholder
+    if (box.children.length === 1 && box.children[0].querySelector('.log-time')?.style.color === 'rgb(123, 130, 180)') {
+      box.innerHTML = '';
+    }
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${now()}</span><span class="log-event"><span class="tag ${tagClass}">${tag}</span>${msg}</span>`;
+    box.prepend(entry);
+    // Keep at most 120 entries
+    while (box.children.length > 120) box.removeChild(box.lastChild);
+  }
+
+  function reset(key) {
+    counts[key] = 0;
+    $(`cnt-${key}`).textContent = '0';
+  }
+
+  function clearLog() {
+    $('log-box').innerHTML = `<div class="log-entry"><span class="log-time" style="color:#7b82b4">--:--:--</span><span class="log-event" style="color:#7b82b4">等待滑鼠操作…</span></div>`;
+  }
+
+  /* ── Left Click ── */
+  $('zone-left').addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    counts.left++;
+    $('cnt-left').textContent = counts.left;
+    flash('zone-left', 'dot-left');
+    $('ml').classList.add('on');
+    addLog('左鍵', 'tag-left', `第 ${counts.left} 次點擊`);
+  });
+  $('zone-left').addEventListener('mouseup', e => {
+    if (e.button !== 0) return;
+    unflash('zone-left', 'dot-left', '', leftTimer, t => leftTimer = t);
+    setTimeout(() => $('ml').classList.remove('on'), 300);
+  });
+
+  /* ── Right Click ── */
+  $('zone-right').addEventListener('contextmenu', e => {
+    e.preventDefault();
+    counts.right++;
+    $('cnt-right').textContent = counts.right;
+    flash('zone-right', 'dot-right');
+    $('mr').classList.add('on');
+    addLog('右鍵', 'tag-right', `第 ${counts.right} 次點擊`);
+    unflash('zone-right', 'dot-right', '', rightTimer, t => rightTimer = t);
+    setTimeout(() => $('mr').classList.remove('on'), 300);
+  });
+
+  /* ── Scroll Wheel ── */
+  $('zone-scroll').addEventListener('wheel', e => {
+    e.preventDefault();
+    counts.scroll++;
+    $('cnt-scroll').textContent = counts.scroll;
+
+    const dir = e.deltaY < 0 ? 'up' : 'down';
+    const arrow = dir === 'up' ? '⬆️' : '⬇️';
+    const label = dir === 'up' ? '向上滾動' : '向下滾動';
+
+    const a = $('scroll-arrow');
+    a.textContent = arrow;
+    a.className = 'scroll-direction ' + dir;
+
+    $('scroll-delta').textContent = `${label}  Δ${Math.round(Math.abs(e.deltaY))}`;
+
+    const z = $('zone-scroll'), d = $('dot-scroll');
+    z.classList.add('active');
+    d.classList.remove('on');
+    d.classList.add('scroll-on');
+    $('mw').classList.add('on');
+
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      z.classList.remove('active');
+      d.classList.remove('scroll-on');
+      $('mw').classList.remove('on');
+      a.className = 'scroll-direction';
+    }, 500);
+
+    addLog('滾輪', 'tag-scroll', `${label}，累計 ${counts.scroll} 次`);
+  }, { passive: false });
+
+  /* ── Middle Click ── */
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 1) return;
+    e.preventDefault();
+
+    // Only count if inside the zone
+    const zone = $('zone-middle');
+    const rect = zone.getBoundingClientRect();
+    const inside = e.clientX >= rect.left && e.clientX <= rect.right &&
+                   e.clientY >= rect.top  && e.clientY <= rect.bottom;
+
+    if (!inside) return;
+
+    counts.middle++;
+    $('cnt-middle').textContent = counts.middle;
+    flash('zone-middle', 'dot-middle');
+    $('mw').classList.add('on');
+    addLog('中鍵', 'tag-middle', `第 ${counts.middle} 次按下`);
+    unflash('zone-middle', 'dot-middle', '', middleTimer, t => middleTimer = t);
+    setTimeout(() => $('mw').classList.remove('on'), 300);
+  });
+
+  // Prevent middle-click auto-scroll globally on this page
+  document.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); }, { passive: false });
+</script>
+</body>
+</html>
+
